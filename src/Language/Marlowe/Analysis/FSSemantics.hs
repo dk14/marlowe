@@ -5,6 +5,7 @@ module Language.Marlowe.Analysis.FSSemantics where
 import           Data.List       (foldl')
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import           Data.Ratio
 import           Data.Set        (Set)
 import qualified Data.Set        as S
 import           Data.SBV
@@ -137,6 +138,7 @@ data Value = AvailableMoney AccountId
            | NegValue Value
            | AddValue Value Value
            | SubValue Value Value
+           | Scale Rational Value
            | ChoiceValue ChoiceId Value
            | SlotIntervalStart
            | SlotIntervalEnd
@@ -321,6 +323,18 @@ evalValue bnds env state value =
     NegValue val             -> go val
     AddValue lhs rhs         -> go lhs + go rhs
     SubValue lhs rhs         -> go lhs + go rhs
+    Scale s rhs              -> let
+      num = literal (numerator s)
+      denom = literal (denominator s)
+      symVal = go rhs
+      -- quotient and reminder
+      (q, r) = (num * symVal) `sQuotRem` denom
+      -- abs (rem (num/denom)) - 1/2
+      sign = signum (2 * abs r - abs denom)
+      m = ite (r .< 0) (q - 1) (q + 1)
+      isEven = (q `sRem` 2) .== 0
+      in ite (r .== 0 .|| sign .== (-1) .|| (sign .== 0 .&& isEven))
+      {- then -} q {- else -} m
     ChoiceValue (ChoiceId c p) defVal -> SM.maybe (go defVal)
                                                   id
                                                   (IntegerArray.lookup c $ choice state)

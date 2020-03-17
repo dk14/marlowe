@@ -1,5 +1,5 @@
 theory Semantics
-imports Main MList SList ListTools "HOL-Library.Product_Lexorder"
+imports Main MList SList ListTools "HOL-Library.Product_Lexorder" HOL.Rat
 begin
 
 type_synonym Slot = int
@@ -287,6 +287,7 @@ datatype Value = AvailableMoney AccountId Token
                | NegValue Value
                | AddValue Value Value
                | SubValue Value Value
+               | Scale rat Value
                | ChoiceValue ChoiceId Value
                | SlotIntervalStart
                | SlotIntervalEnd
@@ -364,6 +365,9 @@ fun fixInterval :: "SlotInterval \<Rightarrow> State \<Rightarrow> IntervalResul
 
 (* EVALUATION *)
 
+fun signum :: "int \<Rightarrow> int" where
+"signum x = (if x > 0 then 1 else if x = 0 then 0 else -1)"
+
 fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarrow> int" where
 "evalValue env state (AvailableMoney accId token) =
     findWithDefault 0 (accId, token) (accounts state)" |
@@ -373,6 +377,15 @@ fun evalValue :: "Environment \<Rightarrow> State \<Rightarrow> Value \<Rightarr
     evalValue env state lhs + evalValue env state rhs" |
 "evalValue env state (SubValue lhs rhs) =
     evalValue env state lhs - evalValue env state rhs" |
+"evalValue env state (Scale s rhs) = 
+    (let (num, denom) = quotient_of s in
+     let multiplied = num * evalValue env state rhs in
+     let q = multiplied div denom in
+     let r = multiplied mod denom in
+     let sign = signum (2 * abs r - abs denom) in
+     let m = if r < 0 then q - 1 else q + 1 in
+     let isEven = (q mod 2) = 0
+     in if r = 0 \<or> sign = (-1) \<or> (sign = 0 \<and> isEven) then q else m)" |
 "evalValue env state (ChoiceValue choId defVal) =
     findWithDefault (evalValue env state defVal) choId (choices state)" |
 "evalValue env state (SlotIntervalStart) = fst (slotInterval env)" |
@@ -393,6 +406,13 @@ lemma evalSubValue :
   "evalValue env sta (SubValue (AddValue x y) y) = evalValue env sta x"
   by auto
 
+lemma evalScaleByZeroIsZero :
+  "evalValue env sta (Scale (0/1) x) = 0"
+  by auto
+
+lemma evalScaleByOneIsX :
+  "evalValue env sta (Scale (1/1) x) = evalValue env sta x"
+  by auto
 
 fun evalObservation :: "Environment \<Rightarrow> State \<Rightarrow> Observation \<Rightarrow> bool" where
 "evalObservation env state (AndObs lhs rhs) =

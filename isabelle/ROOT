@@ -5,9 +5,7 @@ session Test = HOL +
     "HOL-Word"
   theories
      Semantics
-     TransactionBound
      MoneyPreservation
      PositiveAccounts
      QuiescentResult
-     SingleInputTransactions
      ValidState

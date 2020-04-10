@@ -11,6 +11,7 @@ and countWhens :: "Contract \<Rightarrow> nat" where
 "countWhens (If _ c c2) = max (countWhens c) (countWhens c2)" |
 "countWhens (When cl t c) = Suc (max (countWhensCaseList cl) (countWhens c))" |
 "countWhens (Contract.Let _ _ c) = countWhens c"
+"countWhens (Contract.Cond _ _ _ _ c) = countWhens c"
 
 fun maxTransactionsCaseList :: "Case list \<Rightarrow> State \<Rightarrow> nat" where
 "maxTransactionsCaseList caLi st = Suc (countWhensCaseList caLi)"

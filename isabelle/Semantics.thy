@@ -912,6 +912,8 @@ and maxTimeCase :: "Case \<Rightarrow> int" where
 "maxTimeContract (When Nil timeout contract) = max timeout (maxTimeContract contract)" |
 "maxTimeContract (When (Cons head tail) timeout contract) = max (maxTimeCase head) (maxTimeContract (When tail timeout contract))" |
 "maxTimeContract (Let _ _ contract) = maxTimeContract contract" |
-"maxTimeCase (Case _ contract) = maxTimeContract contract"
+"maxTimeContract (Cond _ _ _ _ contract) = maxTimeContract contract" |
+"maxTimeCase (Case _ contract) = maxTimeContract contract" 
+
 
 end

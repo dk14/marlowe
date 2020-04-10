@@ -323,6 +323,7 @@ and Contract = Close
              | If Observation Contract Contract
              | When "Case list" Timeout Contract
              | Let ValueId Value Contract
+             | Cond ValueId Observation Value Value Contract
 
 type_synonym Accounts = "((AccountId \<times> Token) \<times> Money) list"
 
@@ -520,6 +521,15 @@ fun reduceContractStep :: "Environment \<Rightarrow> State \<Rightarrow> Contrac
    let warn = case lookup valId boundVals of
                 Some oldVal \<Rightarrow> ReduceShadowing valId oldVal evaluatedValue
               | None \<Rightarrow> ReduceNoWarning in
+   Reduced warn ReduceNoPayment newState cont)" |
+"reduceContractStep env state (Cond valId cond ifVal elseVal cont) =
+  (let val = (if evalObservation env state cond then ifVal else elseVal) in
+   let evaluatedValue = evalValue env state val in
+   let boundVals = boundValues state in
+   let newState = state \<lparr> boundValues := MList.insert valId evaluatedValue boundVals \<rparr> in
+   let warn = case lookup valId boundVals of
+                Some oldVal \<Rightarrow> ReduceShadowing valId oldVal evaluatedValue
+              | None \<Rightarrow> ReduceNoWarning in
    Reduced warn ReduceNoPayment newState cont)"
 
 datatype ReduceResult = ContractQuiescent "ReduceWarning list" "Payment list"
@@ -648,6 +658,13 @@ lemma reduceContractStepReducesSize_Let :
   apply auto[1]
   by (metis ReduceStepResult.inject reduceContractStep.simps(5) reduceContractStepReducesSize_Let_aux)
 
+lemma reduceContractStepReducesSize_Cond :
+  "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
+   c = Contract.Cond vId cond val1 val2 cont \<Longrightarrow> evalBound nsta nc < evalBound sta c"
+  apply (cases "lookup vId (boundValues sta)")
+  apply auto[1]
+  by (metis ReduceStepResult.inject reduceContractStep.simps(5) reduceContractStepReducesSize_Let_aux)
+
 lemma reduceContractStepReducesSize :
   "reduceContractStep env sta c = Reduced twa tef nsta nc \<Longrightarrow>
      (evalBound nsta nc) < (evalBound sta c)"
@@ -659,7 +676,8 @@ lemma reduceContractStepReducesSize :
   using reduceContractStepReducesSize_Pay apply blast
   apply auto[1]
   apply (meson eq_fst_iff reduceContractStepReducesSize_When)
-  using reduceContractStepReducesSize_Let by blast
+  using reduceContractStepReducesSize_Let apply blast
+  using reduceContractStepReducesSize_Cond by blast
 
 function (sequential) reductionLoop :: "Environment \<Rightarrow> State \<Rightarrow> Contract \<Rightarrow> ReduceWarning list \<Rightarrow>
                                         Payment list \<Rightarrow> ReduceResult" where

@@ -52,6 +52,7 @@ datatype Contract =
  | While Observation Timeout Contract Contract
  | Scale Value Value Value Contract
  | Let LetLabel Contract Contract
+ | Cond LetLabel Observation Contract Contract Contract
  | Use LetLabel
 
 datatype Input =
@@ -266,6 +267,9 @@ fun collectNeededInputsFromContract :: "Contract \<Rightarrow> IdInput slist" wh
                ,collectNeededInputsFromValue value3
                ,collectNeededInputsFromContract contract]" |
 "collectNeededInputsFromContract (Contract.Let _ contract1 contract2) =
+  slist_union (collectNeededInputsFromContract contract1)
+              (collectNeededInputsFromContract contract2)" |
+"collectNeededInputsFromContract (Contract.Cond _ _ contract1 contract2 contract3) =
   slist_union (collectNeededInputsFromContract contract1)
               (collectNeededInputsFromContract contract2)" |
 "collectNeededInputsFromContract (Use _) = SList.empty"

@@ -183,6 +183,7 @@ data Contract = Close
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
+              | Cond ValueId Observation Value Value Contract
   deriving (Eq,Ord,Show,Read)
 
 --data State = State { account :: Map AccountId Money
@@ -472,6 +473,11 @@ reduce bnds env state (Let valId val cont) f =
                     (\oldVal -> sReduceShadowing lValId oldVal evVal)
                     (IntegerArray.lookup (valueIdNumber valId) sv)
     lValId = literalValueId valId
+
+reduce bnds env state (Cond valId cond ifVal elseVal cont) f =
+    ite (evalObservation bnds env state cond)
+        (reduce bnds env state (Let valId ifVal cont) f)
+        (reduce bnds env state (Let valId elseVal cont) f)
 
 -- REDUCE ALL
 

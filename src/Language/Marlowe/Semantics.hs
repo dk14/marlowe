@@ -140,6 +140,7 @@ data Contract = Close
               | If Observation Contract Contract
               | When [Case] Timeout Contract
               | Let ValueId Value Contract
+              | Cond ValueId Observation Value Value Contract
   deriving (Eq,Ord,Show,Read,Generic,Pretty)
 
 data State = State { accounts    :: Map AccountId Money
@@ -334,6 +335,16 @@ reduceContractStep env state contract = case contract of
         else AmbiguousSlotIntervalReductionError
 
     Let valId val cont -> let
+        evaluatedValue = evalValue env state val
+        boundVals = boundValues state
+        newState = state { boundValues = Map.insert valId evaluatedValue boundVals }
+        warn = case Map.lookup valId boundVals of
+              Just oldVal -> ReduceShadowing valId oldVal evaluatedValue
+              Nothing     -> ReduceNoWarning
+        in Reduced warn ReduceNoPayment newState cont
+    
+    Cond valId cond ifVal elseVal cont -> let
+        val = if evalObservation env state cond then ifVal else elseVal
         evaluatedValue = evalValue env state val
         boundVals = boundValues state
         newState = state { boundValues = Map.insert valId evaluatedValue boundVals }

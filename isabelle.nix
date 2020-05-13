@@ -1,6 +1,6 @@
 let
   sources = import ./nix/sources.nix;
-  isabelleOverlay = import ./nix/overlay.nix;
+  isabelleOverlay = import ./nix/overlays/isabelle.nix;
   pkgs = import sources.nixpkgs {
     overlays = [
       (_ : _ : { niv = import sources.niv {}; })

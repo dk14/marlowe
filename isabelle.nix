@@ -1,5 +1,13 @@
 let
-  pkgs = import <nixpkgs> { };
+  sources = import ./nix/sources.nix;
+  isabelleOverlay = import ./nix/overlay.nix;
+  pkgs = import sources.nixpkgs {
+    overlays = [
+      (_ : _ : { niv = import sources.niv {}; })
+      isabelleOverlay
+    ] ;
+    config = {};
+  };
   isabelleBuild = ''
       export HOME=$TMP
       export PATH=$PATH:${pkgs.stdenv.lib.makeBinPath [pkgs.perl pkgs.isabelle]}
@@ -8,9 +16,10 @@ let
     '';
 in rec {
   isabelleTest = pkgs.stdenv.mkDerivation {  
-      name = "lemenv";
+      name = "isabelle-test";
       src = ./.;
       configurePhase = "true"; 	# Skip configure
+      buildInputs = [pkgs.z3 pkgs.polyml pkgs.isabelle];
       buildPhase = isabelleBuild;
       installPhase = "true"; # don't want to install
   };
